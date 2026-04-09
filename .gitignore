@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Docker 匯出封存檔（交付用，不提交進 git）
+*.tar
+
 # User-specific files
 *.rsuser
 *.suo
