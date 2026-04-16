@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# 本機開發設定（含連線字串等敏感資訊，不提交）
+appsettings.Development.json
+
 # Docker 匯出封存檔（交付用，不提交進 git）
 *.tar
 

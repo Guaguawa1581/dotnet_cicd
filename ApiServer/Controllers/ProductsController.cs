@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using ApiServer.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,64 +7,34 @@ namespace ApiServer.Controllers
     [Route("api/[controller]")]
     public class ProductsController : ControllerBase
     {
-        private static readonly List<Product> Products = new List<Product>
+        private readonly IProductRepos _productRepos;
+
+        public ProductsController(IProductRepos ProductRepos)
         {
-            new Product { Id = 1, Name = "Laptop", Price = 999.99m },
-            new Product { Id = 2, Name = "Mouse", Price = 25.00m },
-            new Product { Id = 3, Name = "Keyboard", Price = 50.00m }
-        };
+            _productRepos = ProductRepos;
+        }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Product>> Get()
+        public async Task<ActionResult<IEnumerable<Product>>> Get()
         {
-            return Ok(Products);
+            var products = await _productRepos.GetAllAsync();
+            return Ok(products);
         }
 
-        [HttpGet("{id}")]
-        public ActionResult<Product> Get(int id)
+        /// <summary>
+        /// 非同步大量新增產品（使用 SqlBulkCopy）
+        /// </summary>
+        [HttpPost("bulk")]
+        public async Task<IActionResult> BulkInsert(
+            [FromBody] IEnumerable<Product> products,
+            CancellationToken cancellationToken)
         {
-            var product = Products.FirstOrDefault(p => p.Id == id);
-            if (product == null)
-            {
-                return NotFound();
-            }
-            return Ok(product);
-        }
+            var list = products?.ToList();
+            if (list == null || list.Count == 0)
+                return BadRequest("產品清單不可為空。");
 
-        [HttpPost]
-        public ActionResult<Product> Post([FromBody] Product product)
-        {
-            product.Id = Products.Max(p => p.Id) + 1;
-            Products.Add(product);
-            return CreatedAtAction(nameof(Get), new { id = product.Id }, product);
-        }
-
-        [HttpPut("{id}")]
-        public IActionResult Put(int id, [FromBody] Product product)
-        {
-            var existingProduct = Products.FirstOrDefault(p => p.Id == id);
-            if (existingProduct == null)
-            {
-                return NotFound();
-            }
-
-            existingProduct.Name = product.Name;
-            existingProduct.Price = product.Price;
-
-            return NoContent();
-        }
-
-        [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
-        {
-            var product = Products.FirstOrDefault(p => p.Id == id);
-            if (product == null)
-            {
-                return NotFound();
-            }
-
-            Products.Remove(product);
-            return NoContent();
+            await _productRepos.BulkInsertAsync(list, cancellationToken);
+            return Ok(new { inserted = list.Count });
         }
     }
 }
