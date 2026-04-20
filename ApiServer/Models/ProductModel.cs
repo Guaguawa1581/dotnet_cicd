@@ -1,53 +1,59 @@
 using System.Data;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using ApiServer.Infrastructure;
 
 namespace ApiServer.Models
 {
+    public class ProductModel
+    {
+        public string? PdLogID { get; set; }
+        public string PdName { get; set; } = string.Empty;
+        public int PdPrice { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
     public interface IProductRepos
     {
-        Task<IEnumerable<Product>> GetAllAsync();
-        Task BulkInsertAsync(IEnumerable<Product> products, CancellationToken cancellationToken = default);
+        Task<IEnumerable<ProductModel>> GetAllAsync();
+        Task BulkInsertAsync(IEnumerable<ProductModel> products, CancellationToken cancellationToken = default);
     }
-    public class ProductRepos : IProductRepos
+
+    public class ProductRepos(IDbConnectionFactory db) : IProductRepos
     {
-        private readonly string _connectionString;
+        private readonly IDbConnectionFactory _db = db;
 
-        public ProductRepos(IConfiguration configuration)
+        public async Task<IEnumerable<ProductModel>> GetAllAsync()
         {
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
+            await using var connection = (SqlConnection)await _db.OpenAsync();
+            return await connection.QueryAsync<ProductModel>(
+                "SELECT pdLogID, pdName, pdPrice, CreatedAt FROM guaProduct");
         }
 
-        public async Task<IEnumerable<Product>> GetAllAsync()
+        public async Task BulkInsertAsync(IEnumerable<ProductModel> products, CancellationToken cancellationToken = default)
         {
-            await using var connection = new SqlConnection(_connectionString);
-            return await connection.QueryAsync<Product>(
-                "SELECT Id, Name, Price FROM Products");
-        }
+            var list = products.ToList();
+            var logIds = await _db.GenerateLogIdsAsync(list.Count, cancellationToken);
 
-        public async Task BulkInsertAsync(IEnumerable<Product> products, CancellationToken cancellationToken = default)
-        {
             var table = new DataTable();
-            table.Columns.Add("Name", typeof(string));
-            table.Columns.Add("Price", typeof(decimal));
+            table.Columns.Add("pdLogID", typeof(string));
+            table.Columns.Add("pdName", typeof(string));
+            table.Columns.Add("pdPrice", typeof(int));
 
-            foreach (var product in products)
-            {
-                table.Rows.Add(product.Name, product.Price);
-            }
+            for (int i = 0; i < list.Count; i++)
+                table.Rows.Add(logIds[i], list[i].PdName, list[i].PdPrice);
 
-            await using var connection = new SqlConnection(_connectionString);
-            await connection.OpenAsync(cancellationToken);
+            await using var connection = (SqlConnection)await _db.OpenAsync(cancellationToken);
 
             using var bulkCopy = new SqlBulkCopy(connection)
             {
-                DestinationTableName = "Products",
+                DestinationTableName = "guaProduct",
                 BatchSize = 1000
             };
 
-            bulkCopy.ColumnMappings.Add("Name", "Name");
-            bulkCopy.ColumnMappings.Add("Price", "Price");
+            bulkCopy.ColumnMappings.Add("pdLogID", "pdLogID");
+            bulkCopy.ColumnMappings.Add("pdName", "pdName");
+            bulkCopy.ColumnMappings.Add("pdPrice", "pdPrice");
 
             await bulkCopy.WriteToServerAsync(table, cancellationToken);
         }

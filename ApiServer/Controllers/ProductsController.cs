@@ -15,7 +15,7 @@ namespace ApiServer.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> Get()
+        public async Task<ActionResult<IEnumerable<ProductModel>>> Get()
         {
             var products = await _productRepos.GetAllAsync();
             return Ok(products);
@@ -26,7 +26,7 @@ namespace ApiServer.Controllers
         /// </summary>
         [HttpPost("bulk")]
         public async Task<IActionResult> BulkInsert(
-            [FromBody] IEnumerable<Product> products,
+            [FromBody] IEnumerable<ProductModel> products,
             CancellationToken cancellationToken)
         {
             var list = products?.ToList();
