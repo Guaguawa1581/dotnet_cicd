@@ -9,7 +9,7 @@
 [ Nginx 容器 ]  ──反向代理──▶  [ .NET API 容器 (port 8080) ]
                                        │
                                        ▼ 實體連線
-                              [ MSSQL 192.168.100.87 ]（不進 Docker）
+                              [ MSSQL 你的DB位址 ]（不進 Docker）
 ```
 
 ---
@@ -41,7 +41,7 @@ cp .env.example .env
 編輯 `.env`，確認連線字串與 port 正確：
 
 ```
-DB_CONNECTION_STRING=Data Source=192.168.100.87;Initial Catalog=MQC_Std;Persist Security Info=True;User ID=sa;password=11111111;
+DB_CONNECTION_STRING=Server=你的DB位址; Database=資料庫名稱; User Id=帳號; Password=密碼; TrustServerCertificate=True;
 APP_PORT=5088
 ```
 
