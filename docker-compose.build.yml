@@ -1,0 +1,12 @@
+services:
+  api:
+    image: dotnet-apiserver:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+  nginx:
+    image: dotnet-nginx:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
